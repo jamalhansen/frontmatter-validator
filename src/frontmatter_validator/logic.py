@@ -1,12 +1,20 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Set
+from typing import Any, Dict, List, Optional, Set
 import frontmatter
 import yaml
 
+from pydantic import BaseModel
 from local_first_common.cli import resolve_provider
 from local_first_common.tracking import register_tool, timed_run
 
 _TOOL = register_tool("frontmatter-validator")
+
+class ValidationResult(BaseModel):
+    """Result of frontmatter validation."""
+    is_valid: bool
+    errors: List[str]
+    suggestion: Optional[str] = None
+    metadata: Dict[str, Any]
 
 def load_specs(specs_path: Path = Path("specs.yaml")) -> Dict[str, Any]:
     """Load validation specs from YAML."""
@@ -69,21 +77,29 @@ def validate_content(
     no_llm: bool = False, 
     verbose: bool = False,
     template_fields: Optional[Set[str]] = None
-) -> Tuple[bool, List[str], Optional[str], Dict[str, Any]]:
+) -> ValidationResult:
     """Validate markdown content frontmatter.
-    Returns (is_valid, error_messages, fuzzy_suggestion, cleaned_metadata).
+    Returns a ValidationResult object.
     """
     try:
         post = frontmatter.loads(content)
         metadata = post.metadata
     except Exception as e:
-        return False, [f"Failed to parse frontmatter: {e}"], None, {}
+        return ValidationResult(
+            is_valid=False, 
+            errors=[f"Failed to parse frontmatter: {e}"], 
+            metadata={}
+        )
 
     errors = []
     
     if "Category" not in metadata:
         errors.append("Missing 'Category' field")
-        return False, errors, None, metadata
+        return ValidationResult(
+            is_valid=False, 
+            errors=errors, 
+            metadata=metadata
+        )
 
     category_raw = metadata["Category"]
     category = clean_category(category_raw, specs)
@@ -114,11 +130,16 @@ def validate_content(
                 if not metadata.get(rf):
                     errors.append(f"Field '{rf}' is required when '{field}' is '{val}'")
 
+    suggestion = None
     if errors:
         suggestion = get_fuzzy_suggestions(errors, metadata, no_llm=no_llm, verbose=verbose)
-        return False, errors, suggestion, metadata
         
-    return True, [], None, metadata
+    return ValidationResult(
+        is_valid=len(errors) == 0,
+        errors=errors,
+        suggestion=suggestion,
+        metadata=metadata
+    )
 
 def clean_frontmatter(metadata: Dict[str, Any], allowed_fields: Set[str]) -> Dict[str, Any]:
     """Remove fields NOT in the allowed set."""

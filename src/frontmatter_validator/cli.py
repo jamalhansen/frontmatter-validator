@@ -82,7 +82,7 @@ def validate(
                 if verbose:
                     typer.echo(f"   ℹ️  Using template: {template_path.name}")
 
-        is_valid, errors, suggestion, metadata = validate_content(
+        result = validate_content(
             content, 
             specs, 
             no_llm=no_llm, 
@@ -96,9 +96,9 @@ def validate(
             if template_fields:
                 allowed.update(template_fields)
             
-            cleaned_metadata = clean_frontmatter(metadata, allowed)
-            if len(cleaned_metadata) < len(metadata):
-                removed = set(metadata.keys()) - set(cleaned_metadata.keys())
+            cleaned_metadata = clean_frontmatter(result.metadata, allowed)
+            if len(cleaned_metadata) < len(result.metadata):
+                removed = set(result.metadata.keys()) - set(cleaned_metadata.keys())
                 action_msg = f"[bold yellow]CLEANED[/bold yellow] (removed: {', '.join(removed)})"
                 if not dry_run:
                     post.metadata = cleaned_metadata
@@ -109,9 +109,9 @@ def validate(
             else:
                 action_msg = "No cleaning needed"
 
-        status = "[green]PASS[/green]" if is_valid else "[red]FAIL[/red]"
-        error_str = "\n".join(errors) if errors else ""
-        suggestion_str = suggestion if suggestion else ""
+        status = "[green]PASS[/green]" if result.is_valid else "[red]FAIL[/red]"
+        error_str = "\n".join(result.errors) if result.errors else ""
+        suggestion_str = result.suggestion if result.suggestion else ""
         
         table.add_row(
             str(file.relative_to(path.parent if path.is_dir() else path.parent)), 
@@ -121,7 +121,7 @@ def validate(
             suggestion_str
         )
         
-        if is_valid:
+        if result.is_valid:
             valid_count += 1
         else:
             invalid_count += 1
