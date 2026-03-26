@@ -1,0 +1,33 @@
+[project]
+name = "frontmatter-validator"
+version = "0.1.0"
+description = "Validates content file frontmatter against Content Format Spec."
+readme = "README.md"
+authors = [
+    { name = "Jamal Hansen", email = "jamal.hansen@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "local-first-common",
+    "pydantic>=2.12.5",
+    "python-frontmatter>=1.1.0",
+    "pyyaml>=6.0.3",
+    "rich>=14.3.3",
+    "typer>=0.24.1",
+]
+
+[project.scripts]
+fm-validate = "frontmatter_validator.cli:app"
+
+[tool.uv.sources]
+local-first-common = { path = "../local-first-common", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-cov>=7.1.0",
+]
