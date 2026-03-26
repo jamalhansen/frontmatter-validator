@@ -1,0 +1,59 @@
+# Content Format Spec Configuration
+
+universal:
+  - Category
+  - status
+  - created
+  - published_date
+  - canonical_url
+  - tags
+
+categories:
+  "blog post":
+    aliases: ["blog post", "blog-post", "[[blog post]]"]
+    fields:
+      - title
+      - description
+      - author
+      - date
+      - lastmod
+      - series
+      - series_position
+      - newsletter_url
+      - promo_file
+      - slug
+      - image
+      - unsplash_id
+      - unsplash_name
+      - unsplash_user
+      - draft
+      - weight
+  "find":
+    aliases: ["find", "[[find]]"]
+    fields:
+      - source_url
+      - source_title
+      - source_author
+      - source_type
+      - captured
+      - related
+  "newsletter":
+    aliases: ["newsletter", "[[newsletter]]"]
+    fields:
+      - issue_number
+      - beehiiv_url
+      - blog_post
+      - finds_included
+      - related
+      - Week
+      - title
+      - subtitle
+      - type
+  "standalone":
+    aliases: ["standalone", "[[standalone]]"]
+    fields: []
+
+validations:
+  - field: status
+    value: published
+    require: [published_date]
