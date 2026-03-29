@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Optional
 import typer
 import frontmatter
 from rich.console import Console
@@ -31,13 +31,13 @@ TEMPLATE_MAP = {
 
 @app.command()
 def validate(
-    path: Annotated[Path, typer.Argument(help="File or directory to validate")],
-    spec: Annotated[Optional[Path], typer.Option("--spec", help="Path to custom validation spec YAML")] = Path("specs.yaml"),
-    template_dir: Annotated[Optional[Path], typer.Option("--template-dir", help="Path to Obsidian templates directory")] = None,
-    clean: Annotated[bool, typer.Option("--clean", help="Remove unused frontmatter fields NOT in spec")] = False,
-    dry_run: Annotated[bool, dry_run_option()] = False,
-    no_llm: Annotated[bool, no_llm_option()] = False,
-    verbose: Annotated[bool, verbose_option()] = False,
+    path: Path = typer.Argument(..., help="File or directory to validate"),
+    spec: Optional[Path] = typer.Option(Path("specs.yaml"), "--spec", help="Path to custom validation spec YAML"),
+    template_dir: Optional[Path] = typer.Option(None, "--template-dir", help="Path to Obsidian templates directory"),
+    clean: bool = typer.Option(False, "--clean", help="Remove unused frontmatter fields NOT in spec"),
+    dry_run: bool = dry_run_option(),
+    no_llm: bool = no_llm_option(),
+    verbose: bool = verbose_option(),
 ):
     """Validate Obsidian markdown frontmatter against Content Format Spec."""
     dry_run = resolve_dry_run(dry_run, no_llm)
