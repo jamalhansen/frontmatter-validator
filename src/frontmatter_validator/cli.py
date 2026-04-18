@@ -1,11 +1,12 @@
 from pathlib import Path
-from typing import Optional
+from typing import Annotated, Optional
 import typer
 import frontmatter
 from rich.console import Console
 from rich.table import Table
 
 from local_first_common.cli import (
+    init_config_option,
     dry_run_option,
     no_llm_option,
     verbose_option,
@@ -19,6 +20,9 @@ from .logic import (
     clean_category,
     get_allowed_fields
 )
+
+TOOL_NAME = "frontmatter-validator"
+DEFAULTS = {"provider": "ollama", "model": "llama3"}
 
 app = typer.Typer(help="Content Frontmatter Validator")
 console = Console()
@@ -35,9 +39,10 @@ def validate(
     spec: Optional[Path] = typer.Option(Path("specs.yaml"), "--spec", help="Path to custom validation spec YAML"),
     template_dir: Optional[Path] = typer.Option(None, "--template-dir", help="Path to Obsidian templates directory"),
     clean: bool = typer.Option(False, "--clean", help="Remove unused frontmatter fields NOT in spec"),
-    dry_run: bool = dry_run_option(),
-    no_llm: bool = no_llm_option(),
-    verbose: bool = verbose_option(),
+    dry_run: Annotated[bool, dry_run_option()] = False,
+    no_llm: Annotated[bool, no_llm_option()] = False,
+    verbose: Annotated[bool, verbose_option()] = False,
+    init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ):
     """Validate Obsidian markdown frontmatter against Content Format Spec."""
     dry_run = resolve_dry_run(dry_run, no_llm)

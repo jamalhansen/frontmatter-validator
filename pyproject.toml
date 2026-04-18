@@ -13,6 +13,7 @@ dependencies = [
     "python-frontmatter>=1.1.0",
     "pyyaml>=6.0.3",
     "rich>=14.3.3",
+    "toml>=0.10.2",
     "typer>=0.24.1",
 ]
 
@@ -20,7 +21,7 @@ dependencies = [
 fm-validate = "frontmatter_validator.cli:app"
 
 [tool.uv.sources]
-local-first-common = { git = "https://github.com/jamalhansen/local-first-common.git", branch = "main" }
+local-first-common = {path = "../local-first-common", editable = true}
 
 [build-system]
 requires = ["hatchling"]
