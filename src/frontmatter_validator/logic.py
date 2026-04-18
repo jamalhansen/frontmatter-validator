@@ -1,3 +1,5 @@
+from local_first_common.config import get_setting
+from local_first_common.cli import init_config_option
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 import frontmatter
@@ -8,6 +10,8 @@ from local_first_common.cli import resolve_provider
 from local_first_common.tracking import register_tool, timed_run
 
 _TOOL = register_tool("frontmatter-validator")
+TOOL_NAME = "frontmatter-validator"
+DEFAULTS = {"provider": "ollama", "model": "llama3"}
 
 class ValidationResult(BaseModel):
     """Result of frontmatter validation."""
@@ -55,7 +59,9 @@ def get_fuzzy_suggestions(
         return None
 
     try:
-        llm = resolve_provider(no_llm=no_llm)
+        actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
+    actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
+    llm = resolve_provider(no_llm=no_llm)
         system = "You are a helpful assistant that suggests fixes for YAML frontmatter validation errors."
         user = f"Validation failed with these errors:\n{errors}\n\nFrontmatter data:\n{metadata}\n\nSuggest specific fixes or common typos (e.g., 'did you mean article?'). Be extremely concise."
         
