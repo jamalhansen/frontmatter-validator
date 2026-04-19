@@ -13,12 +13,15 @@ from local_first_common.cli import (
     resolve_dry_run,
 )
 from .logic import (
-    load_specs, 
-    validate_content, 
-    clean_frontmatter, 
-    get_template_fields, 
+    FrontmatterParseError,
+    SpecLoadError,
+    parse_frontmatter_or_raise,
+    load_specs,
+    validate_content,
+    clean_frontmatter,
+    get_template_fields,
     clean_category,
-    get_allowed_fields
+    get_allowed_fields,
 )
 
 TOOL_NAME = "frontmatter-validator"
@@ -33,12 +36,19 @@ TEMPLATE_MAP = {
     "newsletter": "Newsletter.md",
 }
 
+
 @app.command()
 def validate(
     path: Path = typer.Argument(..., help="File or directory to validate"),
-    spec: Optional[Path] = typer.Option(Path("specs.yaml"), "--spec", help="Path to custom validation spec YAML"),
-    template_dir: Optional[Path] = typer.Option(None, "--template-dir", help="Path to Obsidian templates directory"),
-    clean: bool = typer.Option(False, "--clean", help="Remove unused frontmatter fields NOT in spec"),
+    spec: Optional[Path] = typer.Option(
+        Path("specs.yaml"), "--spec", help="Path to custom validation spec YAML"
+    ),
+    template_dir: Optional[Path] = typer.Option(
+        None, "--template-dir", help="Path to Obsidian templates directory"
+    ),
+    clean: bool = typer.Option(
+        False, "--clean", help="Remove unused frontmatter fields NOT in spec"
+    ),
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: Annotated[bool, verbose_option()] = False,
@@ -46,8 +56,12 @@ def validate(
 ):
     """Validate Obsidian markdown frontmatter against Content Format Spec."""
     dry_run = resolve_dry_run(dry_run, no_llm)
-    specs = load_specs(spec)
-    
+    try:
+        specs = load_specs(spec)
+    except SpecLoadError as e:
+        typer.secho(f"Error: {e}", fg=typer.colors.RED)
+        raise typer.Exit(1)
+
     if path.is_file():
         files = [path]
     elif path.is_dir():
@@ -73,12 +87,15 @@ def validate(
 
     for file in files:
         content = file.read_text(encoding="utf-8")
-        
+
         # Determine category for template lookup
-        post = frontmatter.loads(content)
+        try:
+            post = parse_frontmatter_or_raise(content)
+        except FrontmatterParseError:
+            post = frontmatter.Post("", **{})
         category_raw = post.metadata.get("Category", "")
         category = clean_category(category_raw, specs)
-        
+
         template_fields = None
         if template_dir and category in TEMPLATE_MAP:
             template_path = template_dir / TEMPLATE_MAP[category]
@@ -88,19 +105,19 @@ def validate(
                     typer.echo(f"   ℹ️  Using template: {template_path.name}")
 
         result = validate_content(
-            content, 
-            specs, 
-            no_llm=no_llm, 
+            content,
+            specs,
+            no_llm=no_llm,
             verbose=verbose,
-            template_fields=template_fields
+            template_fields=template_fields,
         )
-        
+
         action_msg = ""
         if clean:
             allowed = get_allowed_fields(category, specs)
             if template_fields:
                 allowed.update(template_fields)
-            
+
             cleaned_metadata = clean_frontmatter(result.metadata, allowed)
             if len(cleaned_metadata) < len(result.metadata):
                 removed = set(result.metadata.keys()) - set(cleaned_metadata.keys())
@@ -117,15 +134,15 @@ def validate(
         status = "[green]PASS[/green]" if result.is_valid else "[red]FAIL[/red]"
         error_str = "\n".join(result.errors) if result.errors else ""
         suggestion_str = result.suggestion if result.suggestion else ""
-        
+
         table.add_row(
-            str(file.relative_to(path.parent if path.is_dir() else path.parent)), 
-            status, 
-            error_str, 
+            str(file.relative_to(path.parent if path.is_dir() else path.parent)),
+            status,
+            error_str,
             action_msg,
-            suggestion_str
+            suggestion_str,
         )
-        
+
         if result.is_valid:
             valid_count += 1
         else:
@@ -137,8 +154,11 @@ def validate(
         summary += f" {cleaned_count} files cleaned."
     typer.echo(summary)
 
-    if invalid_count > 0 and not clean: # If clean fixed it, maybe it shouldn't fail? But usually validation is first.
+    if (
+        invalid_count > 0 and not clean
+    ):  # If clean fixed it, maybe it shouldn't fail? But usually validation is first.
         raise typer.Exit(1)
+
 
 if __name__ == "__main__":
     app()
