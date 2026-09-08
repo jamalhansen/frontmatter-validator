@@ -1,7 +1,11 @@
+import json
+import logging
+import sys
 from pathlib import Path
 from typing import Annotated, Optional
-import typer
+
 import frontmatter
+import typer
 from rich.console import Console
 from rich.table import Table
 
@@ -10,8 +14,11 @@ from local_first_common.cli import (
     dry_run_option,
     no_llm_option,
     verbose_option,
+    pipe_option,
+    json_option,
     resolve_dry_run,
 )
+from local_first_common.logging import setup_logging
 from .logic import (
     FrontmatterParseError,
     SpecLoadError,
@@ -39,7 +46,10 @@ TEMPLATE_MAP = {
 
 @app.command()
 def validate(
-    path: Path = typer.Argument(..., help="File or directory to validate"),
+    path: Annotated[
+        Optional[Path],
+        typer.Argument(help="File or directory to validate (or '-' for stdin)"),
+    ] = None,
     spec: Optional[Path] = typer.Option(
         Path("specs.yaml"), "--spec", help="Path to custom validation spec YAML"
     ),
@@ -49,6 +59,8 @@ def validate(
     clean: bool = typer.Option(
         False, "--clean", help="Remove unused frontmatter fields NOT in spec"
     ),
+    pipe: Annotated[bool, pipe_option()] = False,
+    json_output: Annotated[bool, json_option()] = False,
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: Annotated[bool, verbose_option()] = False,
@@ -56,10 +68,78 @@ def validate(
 ):
     """Validate Obsidian markdown frontmatter against Content Format Spec."""
     dry_run = resolve_dry_run(dry_run, no_llm)
+
+    log_level = logging.DEBUG if verbose else logging.WARNING
+    setup_logging(level=log_level, tool_name=TOOL_NAME, persist_warnings=True)
+
     try:
         specs = load_specs(spec)
     except SpecLoadError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED)
+        raise typer.Exit(1)
+
+    is_pipe = pipe or (path is not None and str(path) == "-")
+
+    if is_pipe:
+        content = sys.stdin.read()
+        try:
+            post = parse_frontmatter_or_raise(content)
+        except FrontmatterParseError:
+            post = frontmatter.Post("", **{})
+        category_raw = post.metadata.get("Category", "")
+        category = clean_category(category_raw, specs)
+
+        template_fields = None
+        if template_dir and category in TEMPLATE_MAP:
+            template_path = template_dir / TEMPLATE_MAP[category]
+            if template_path.exists():
+                template_fields = get_template_fields(template_path)
+
+        result = validate_content(
+            content,
+            specs,
+            no_llm=no_llm,
+            verbose=verbose,
+            template_fields=template_fields,
+        )
+
+        output_content = content
+        if clean:
+            allowed = get_allowed_fields(category, specs)
+            if template_fields:
+                allowed.update(template_fields)
+            cleaned_metadata = clean_frontmatter(result.metadata, allowed)
+            post.metadata = cleaned_metadata
+            output_content = frontmatter.dumps(post)
+
+        if json_output:
+            print(
+                json.dumps(
+                    {
+                        "is_valid": result.is_valid,
+                        "errors": result.errors,
+                        "metadata": result.metadata,
+                        "suggestion": result.suggestion,
+                    },
+                    indent=2,
+                )
+            )
+            if not result.is_valid:
+                raise typer.Exit(1)
+            return
+
+        if result.is_valid:
+            sys.stdout.write(output_content)
+        else:
+            sys.stderr.write(f"Validation failed: {', '.join(result.errors)}\n")
+            raise typer.Exit(1)
+        return
+
+    if path is None:
+        typer.secho(
+            "Error: Missing file or directory path (or '-' for stdin).",
+            fg=typer.colors.RED,
+        )
         raise typer.Exit(1)
 
     if path.is_file():
@@ -84,6 +164,7 @@ def validate(
     valid_count = 0
     invalid_count = 0
     cleaned_count = 0
+    results_json = []
 
     for file in files:
         content = file.read_text(encoding="utf-8")
@@ -148,16 +229,30 @@ def validate(
         else:
             invalid_count += 1
 
+        results_json.append(
+            {
+                "file": str(file),
+                "is_valid": result.is_valid,
+                "errors": result.errors,
+                "metadata": result.metadata,
+            }
+        )
+
+    if json_output:
+        print(json.dumps(results_json, indent=2))
+        if invalid_count > 0 and not clean:
+            raise typer.Exit(1)
+        return
+
     console.print(table)
     summary = f"\nSummary: {valid_count} passed, {invalid_count} failed."
     if cleaned_count > 0:
         summary += f" {cleaned_count} files cleaned."
     typer.echo(summary)
 
-    if (
-        invalid_count > 0 and not clean
-    ):  # If clean fixed it, maybe it shouldn't fail? But usually validation is first.
+    if invalid_count > 0 and not clean:
         raise typer.Exit(1)
+
 
 
 if __name__ == "__main__":

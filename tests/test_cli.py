@@ -81,3 +81,20 @@ def test_validate_clean_real(mock_spec, tmp_path):
     
     # File SHOULD be modified
     assert "Extra: field" not in test_file.read_text()
+
+
+def test_validate_pipe_and_json(mock_spec, tmp_path):
+    content = "---\nCategory: blog post\nTitle: Piped Post\n---\nPiped content"
+    
+    # Test pipe pass
+    res_pipe = runner.invoke(app, ["-", "--spec", str(mock_spec)], input=content)
+    assert res_pipe.exit_code == 0
+    assert "Piped content" in res_pipe.stdout
+
+    # Test json output
+    test_file = tmp_path / "test.md"
+    test_file.write_text(content)
+    res_json = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--json"])
+    assert res_json.exit_code == 0
+    assert '"is_valid": true' in res_json.stdout
+
