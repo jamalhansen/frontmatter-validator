@@ -19,7 +19,7 @@ from local_first_common.cli import (
     resolve_dry_run,
 )
 from local_first_common.logging import setup_logging
-from .logic import (
+from .core import (
     FrontmatterParseError,
     SpecLoadError,
     parse_frontmatter_or_raise,
