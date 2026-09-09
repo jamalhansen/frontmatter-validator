@@ -32,7 +32,7 @@ from .core import (
 )
 
 TOOL_NAME = "frontmatter-validator"
-DEFAULTS = {"provider": "ollama", "model": "llama3"}
+DEFAULTS = {"provider": "ollama", "model": "llama3.2:3b"}
 
 app = typer.Typer(help="Content Frontmatter Validator")
 console = Console()
