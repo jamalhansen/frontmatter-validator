@@ -1,7 +1,8 @@
 import pytest
-from typer.testing import CliRunner
-from frontmatter_validator.cli import app
 import yaml
+from typer.testing import CliRunner
+
+from frontmatter_validator.cli import app
 
 runner = CliRunner()
 

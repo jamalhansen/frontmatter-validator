@@ -1,5 +1,7 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 from frontmatter_validator.logic import (
     FrontmatterParseError,
     SpecLoadError,

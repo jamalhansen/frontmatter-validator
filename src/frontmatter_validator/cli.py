@@ -2,33 +2,33 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated
 
 import frontmatter
 import typer
+from local_first_common.cli import (
+    dry_run_option,
+    init_config_option,
+    json_option,
+    no_llm_option,
+    pipe_option,
+    resolve_dry_run,
+    verbose_option,
+)
+from local_first_common.logging import setup_logging
 from rich.console import Console
 from rich.table import Table
 
-from local_first_common.cli import (
-    init_config_option,
-    dry_run_option,
-    no_llm_option,
-    verbose_option,
-    pipe_option,
-    json_option,
-    resolve_dry_run,
-)
-from local_first_common.logging import setup_logging
 from .core import (
     FrontmatterParseError,
     SpecLoadError,
-    parse_frontmatter_or_raise,
-    load_specs,
-    validate_content,
-    clean_frontmatter,
-    get_template_fields,
     clean_category,
+    clean_frontmatter,
     get_allowed_fields,
+    get_template_fields,
+    load_specs,
+    parse_frontmatter_or_raise,
+    validate_content,
 )
 
 TOOL_NAME = "frontmatter-validator"
@@ -47,15 +47,15 @@ TEMPLATE_MAP = {
 @app.command()
 def validate(
     path: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Argument(help="File or directory to validate (or '-' for stdin)"),
     ] = None,
-    spec: Optional[Path] = typer.Option(
-        Path("specs.yaml"), "--spec", help="Path to custom validation spec YAML"
-    ),
-    template_dir: Optional[Path] = typer.Option(
-        None, "--template-dir", help="Path to Obsidian templates directory"
-    ),
+    spec: Annotated[
+        Path | None, typer.Option("--spec", help="Path to custom validation spec YAML")
+    ] = Path("specs.yaml"),
+    template_dir: Annotated[
+        Path | None, typer.Option("--template-dir", help="Path to Obsidian templates directory")
+    ] = None,
     clean: bool = typer.Option(
         False, "--clean", help="Remove unused frontmatter fields NOT in spec"
     ),
@@ -85,7 +85,7 @@ def validate(
         try:
             post = parse_frontmatter_or_raise(content)
         except FrontmatterParseError:
-            post = frontmatter.Post("", **{})
+            post = frontmatter.Post("")
         category_raw = post.metadata.get("Category", "")
         category = clean_category(category_raw, specs)
 
@@ -173,7 +173,7 @@ def validate(
         try:
             post = parse_frontmatter_or_raise(content)
         except FrontmatterParseError:
-            post = frontmatter.Post("", **{})
+            post = frontmatter.Post("")
         category_raw = post.metadata.get("Category", "")
         category = clean_category(category_raw, specs)
 
@@ -217,7 +217,7 @@ def validate(
         suggestion_str = result.suggestion if result.suggestion else ""
 
         table.add_row(
-            str(file.relative_to(path.parent if path.is_dir() else path.parent)),
+            str(file.relative_to(path if path.is_dir() else path.parent)),
             status,
             error_str,
             action_msg,

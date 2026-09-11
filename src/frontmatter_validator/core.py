@@ -1,11 +1,11 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
+
 import frontmatter
 import yaml
-from pydantic import BaseModel
-
 from local_first_common.cli import resolve_provider
 from local_first_common.tracking import timed_run
+from pydantic import BaseModel
 
 
 class FrontmatterValidatorError(Exception):
@@ -24,12 +24,12 @@ class ValidationResult(BaseModel):
     """Result of frontmatter validation."""
 
     is_valid: bool
-    errors: List[str]
-    suggestion: Optional[str] = None
-    metadata: Dict[str, Any]
+    errors: list[str]
+    suggestion: str | None = None
+    metadata: dict[str, Any]
 
 
-def load_specs_or_raise(specs_path: Path = Path("specs.yaml")) -> Dict[str, Any]:
+def load_specs_or_raise(specs_path: Path = Path("specs.yaml")) -> dict[str, Any]:
     """Load validation specs from YAML, raising typed errors on failures."""
     if not specs_path.exists():
         return {"universal": [], "categories": {}, "validations": []}
@@ -47,7 +47,7 @@ def load_specs_or_raise(specs_path: Path = Path("specs.yaml")) -> Dict[str, Any]
     return parsed
 
 
-def load_specs(specs_path: Path = Path("specs.yaml")) -> Dict[str, Any]:
+def load_specs(specs_path: Path = Path("specs.yaml")) -> dict[str, Any]:
     """Compatibility wrapper for legacy callers that expect direct return values."""
     return load_specs_or_raise(specs_path)
 
@@ -56,11 +56,11 @@ def parse_frontmatter_or_raise(content: str) -> frontmatter.Post:
     """Parse markdown frontmatter with typed failure semantics."""
     try:
         return frontmatter.loads(content)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         raise FrontmatterParseError(f"Failed to parse frontmatter: {e}") from e
 
 
-def clean_category(category: str, specs: Dict[str, Any]) -> str:
+def clean_category(category: str, specs: dict[str, Any]) -> str:
     """Find the canonical category name from a string (including aliases)."""
     val = category.lower().strip()
 
@@ -74,7 +74,7 @@ def clean_category(category: str, specs: Dict[str, Any]) -> str:
     return val.strip("[]").strip().lower()
 
 
-def get_allowed_fields(category: str, specs: Dict[str, Any]) -> Set[str]:
+def get_allowed_fields(category: str, specs: dict[str, Any]) -> set[str]:
     """Get the set of all allowed fields for a category."""
     allowed = set(specs.get("universal", []))
     cat_info = specs.get("categories", {}).get(category, {})
@@ -83,11 +83,11 @@ def get_allowed_fields(category: str, specs: Dict[str, Any]) -> Set[str]:
 
 
 def get_fuzzy_suggestions(
-    errors: List[str],
-    metadata: Dict[str, Any],
+    errors: list[str],
+    metadata: dict[str, Any],
     no_llm: bool = False,
     verbose: bool = False,
-) -> Optional[str]:
+) -> str | None:
     """Use LLM to suggest fixes for validation errors."""
     if no_llm:
         return None
@@ -104,7 +104,7 @@ def get_fuzzy_suggestions(
             suggestion = llm.complete(system, user)
             _run.item_count = 1
             return suggestion.strip()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - LLM suggestion is optional/best-effort; any failure should degrade to no suggestion, not crash validation
         if verbose:
             print(f"⚠️  LLM suggestion failed: {e}")
         return None
@@ -112,10 +112,10 @@ def get_fuzzy_suggestions(
 
 def validate_content(
     content: str,
-    specs: Dict[str, Any],
+    specs: dict[str, Any],
     no_llm: bool = False,
     verbose: bool = False,
-    template_fields: Optional[Set[str]] = None,
+    template_fields: set[str] | None = None,
 ) -> ValidationResult:
     """Validate markdown content frontmatter.
     Returns a ValidationResult object.
@@ -176,13 +176,13 @@ def validate_content(
 
 
 def clean_frontmatter(
-    metadata: Dict[str, Any], allowed_fields: Set[str]
-) -> Dict[str, Any]:
+    metadata: dict[str, Any], allowed_fields: set[str]
+) -> dict[str, Any]:
     """Remove fields NOT in the allowed set."""
     return {k: v for k, v in metadata.items() if k in allowed_fields}
 
 
-def get_template_fields(template_path: Path) -> Set[str]:
+def get_template_fields(template_path: Path) -> set[str]:
     """Extract frontmatter field names from an Obsidian template."""
     if not template_path.exists():
         return set()
@@ -190,5 +190,5 @@ def get_template_fields(template_path: Path) -> Set[str]:
         content = template_path.read_text(encoding="utf-8")
         post = frontmatter.loads(content)
         return set(post.metadata.keys())
-    except Exception:
+    except Exception:  # noqa: BLE001 - a hand-edited template can fail to parse in many ways; treat as no fields rather than crash
         return set()
