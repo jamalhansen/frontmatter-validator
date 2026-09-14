@@ -87,13 +87,14 @@ def get_fuzzy_suggestions(
     metadata: dict[str, Any],
     no_llm: bool = False,
     verbose: bool = False,
+    model: str = "llama3.2:3b",
 ) -> str | None:
     """Use LLM to suggest fixes for validation errors."""
     if no_llm:
         return None
 
     try:
-        llm = resolve_provider(model="llama3.2:3b", no_llm=no_llm)
+        llm = resolve_provider(model=model, no_llm=no_llm)
         system = "You are a helpful assistant that suggests fixes for YAML frontmatter validation errors."
         user = f"Validation failed with these errors:\n{errors}\n\nFrontmatter data:\n{metadata}\n\nSuggest specific fixes or common typos (e.g., 'did you mean article?'). Be extremely concise."
 
