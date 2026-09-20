@@ -94,7 +94,7 @@ def get_fuzzy_suggestions(
         return None
 
     try:
-        llm = resolve_provider(model=model, no_llm=no_llm)
+        llm = resolve_provider(model=model, no_llm=no_llm, tool_name="frontmatter-validator")
         system = "You are a helpful assistant that suggests fixes for YAML frontmatter validation errors."
         user = f"Validation failed with these errors:\n{errors}\n\nFrontmatter data:\n{metadata}\n\nSuggest specific fixes or common typos (e.g., 'did you mean article?'). Be extremely concise."
 
