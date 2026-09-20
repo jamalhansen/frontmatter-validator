@@ -6,6 +6,7 @@ from frontmatter_validator.logic import (
     FrontmatterParseError,
     SpecLoadError,
     ValidationResult,
+    clean_category,
     clean_frontmatter,
     load_specs,
     load_specs_or_raise,
@@ -17,6 +18,25 @@ from frontmatter_validator.logic import (
 @pytest.fixture
 def specs():
     return load_specs(Path("specs.yaml"))
+
+
+@pytest.mark.parametrize(
+    "real_value",
+    [
+        "[[Blog Series]]",
+        "[[Series Index]]",
+        "[[Series Reference]]",
+        "[[Series Foundation]]",
+    ],
+)
+def test_series_category_recognizes_every_real_variant_in_use(specs, real_value):
+    """Regression 2026-09-20: 4 different category values were in real use
+    for series landing/index pages, none recognized by the spec -- every one
+    of these files was invisible to category-specific validation, including
+    whether it had a status set (a masked, not fixed, gap: recognizing the
+    category doesn't exempt these files from needing status/tags/created,
+    it just makes the validator able to see them as what they are)."""
+    assert clean_category(real_value, specs) == "series"
 
 
 def test_validate_blog_post_valid(specs):

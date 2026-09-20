@@ -50,6 +50,29 @@ categories:
   "standalone":
     aliases: ["standalone", "[[standalone]]"]
     fields: []
+  "series":
+    # A series landing/index/reference page, not a post in the series --
+    # found live 2026-09-20: 4 different category values in real use for
+    # this same content type (none recognized by the spec before this),
+    # so every one of these files was invisible to validation entirely,
+    # including whether it had a status set.
+    aliases:
+      - series
+      - "[[series]]"
+      - "blog series"
+      - "[[blog series]]"
+      - "series index"
+      - "[[series index]]"
+      - "series reference"
+      - "[[series reference]]"
+      - "series foundation"
+      - "[[series foundation]]"
+    fields:
+      - title
+      - series
+      - persona
+      - origin
+      - source_note
 
 validations:
   - field: status
