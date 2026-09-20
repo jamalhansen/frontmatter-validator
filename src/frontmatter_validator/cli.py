@@ -62,11 +62,12 @@ def validate(
     fill_defaults: bool = typer.Option(
         False,
         "--fill-defaults",
-        help="Fill missing 'created' from the filename's date prefix, or the "
-        "file's own mtime if there's no prefix. tags are handled by the real "
-        "obsidian-vault-auto-tagger tool instead; canonical_url-from-slug is "
-        "computed but not yet wired to write (a derived guess, needs its own "
-        "confirmed rollout). category/status are never touched -- judgment calls.",
+        help="Fill missing 'created' from the filename's date prefix (or the "
+        "file's creation time if there's no prefix), and 'canonical_url' from "
+        "slug for published blog posts (verified against real published URLs; "
+        "shown in the Actions column so it's never a silent write). tags are "
+        "handled by the real obsidian-vault-auto-tagger tool instead. "
+        "category/status are never touched -- judgment calls.",
     ),
     pipe: Annotated[bool, pipe_option()] = False,
     json_output: Annotated[bool, json_option()] = False,
@@ -235,24 +236,25 @@ def validate(
 
         if fill_defaults:
             fills = compute_default_fills(pending_metadata, file)
-            # Scoped to 'created' for now -- tags are handled by the real
-            # obsidian-vault-auto-tagger tool, and canonical_url is a derived
-            # guess that needs its own visible-confirmation rollout before
-            # this writes it unattended.
-            created_fill = fills.get("created")
-            if created_fill:
-                value, reason = created_fill
-                pending_metadata["created"] = value
+            # tags is excluded -- handled by the real obsidian-vault-auto-tagger
+            # tool instead, which reads content rather than guessing.
+            wireable = {k: v for k, v in fills.items() if k in ("created", "canonical_url")}
+            for target_field in ("created", "canonical_url"):
+                fill = wireable.get(target_field)
+                if not fill:
+                    continue
+                value, reason = fill
+                pending_metadata[target_field] = value
                 if dry_run:
-                    action_msgs.append(f"[dry-run] Would fill created={value} ({reason})")
+                    action_msgs.append(f"[dry-run] Would fill {target_field}={value} ({reason})")
                 else:
-                    action_msgs.append(f"[bold cyan]FILLED[/bold cyan] created={value} ({reason})")
+                    action_msgs.append(f"[bold cyan]FILLED[/bold cyan] {target_field}={value} ({reason})")
                     needs_write = True
                     filled_count += 1
-            skipped = {k: v for k, v in fills.items() if k != "created"}
+            skipped = {k: v for k, v in fills.items() if k not in wireable}
             if skipped:
                 skipped_str = ", ".join(f"{k}={v[0]}" for k, v in skipped.items())
-                action_msgs.append(f"[dim]Not filled (not yet wired): {skipped_str}[/dim]")
+                action_msgs.append(f"[dim]Not filled (handled elsewhere): {skipped_str}[/dim]")
 
         if needs_write:
             post.metadata = pending_metadata

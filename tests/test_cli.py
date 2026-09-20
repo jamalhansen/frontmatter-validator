@@ -123,6 +123,31 @@ def test_validate_fill_defaults_real_writes_created_from_filename(mock_spec, tmp
     assert "created: 2026-04-04" in written
 
 
+def test_validate_fill_defaults_writes_canonical_url_for_published_blog_post(mock_spec, tmp_path):
+    test_file = tmp_path / "2026-04-04-test.md"
+    test_file.write_text(
+        "---\ncategory: blog post\nTitle: My Post\nstatus: published\n"
+        "slug: my-post\n---\nContent"
+    )
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults"])
+    assert result.exit_code == 0
+
+    written = test_file.read_text()
+    assert "canonical_url: https://jamalhansen.com/blog/my-post/" in written
+
+
+def test_validate_fill_defaults_does_not_touch_canonical_url_for_draft(mock_spec, tmp_path):
+    test_file = tmp_path / "2026-04-04-test.md"
+    test_file.write_text(
+        "---\ncategory: blog post\nTitle: My Post\nstatus: draft\n"
+        "slug: my-post\n---\nContent"
+    )
+
+    runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults"])
+    assert "canonical_url" not in test_file.read_text()
+
+
 def test_validate_fill_defaults_with_no_llm_still_writes(mock_spec, tmp_path):
     """Same regression as --clean: --no-llm must not force dry-run for this
     tool's deterministic write actions."""

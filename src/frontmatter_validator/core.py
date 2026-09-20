@@ -156,6 +156,10 @@ def validate_content(
         field = v.get("field")
         val = v.get("value")
         required_fields = v.get("require", [])
+        when_category = v.get("when_category")
+
+        if when_category and category not in when_category:
+            continue
 
         if metadata.get(field) == val:
             for rf in required_fields:

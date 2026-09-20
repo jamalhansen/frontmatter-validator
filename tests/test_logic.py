@@ -126,6 +126,42 @@ title: "Missing date"
     assert result2.is_valid, f"Should be valid now: {result2.errors}"
 
 
+def test_published_find_does_not_require_canonical_url(specs):
+    """Regression 2026-09-20: canonical_url (a jamalhansen.com/blog/<slug>/
+    page) was required for ANY published item regardless of category --
+    28 published finds and newsletter issues were failing this even though
+    they were never blog posts. finds even ship a template
+    canonical_url: "" placeholder that this rule treated as unfilled."""
+    content = """---
+category: "find"
+status: published
+created: 2026-03-26
+published_date: 2026-03-26
+canonical_url: ""
+source_url: "https://example.com/article"
+tags: []
+---
+"""
+    result = validate_content(content, specs, no_llm=True)
+    assert result.is_valid, f"A published find should not need canonical_url: {result.errors}"
+
+
+def test_published_blog_post_still_requires_canonical_url(specs):
+    content = """---
+category: "blog post"
+status: published
+created: 2026-03-26
+published_date: 2026-03-26
+canonical_url: ""
+tags: []
+title: "A published post"
+---
+"""
+    result = validate_content(content, specs, no_llm=True)
+    assert not result.is_valid
+    assert any("canonical_url" in e for e in result.errors)
+
+
 def test_draft_status_does_not_require_published_date_or_canonical_url(specs):
     """Regression 2026-09-20: published_date and canonical_url used to be
     listed as universal (required for every item regardless of status) --

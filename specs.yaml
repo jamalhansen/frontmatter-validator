@@ -77,4 +77,14 @@ categories:
 validations:
   - field: status
     value: published
-    require: [published_date, canonical_url]
+    require: [published_date]
+  - field: status
+    value: published
+    when_category: ["blog post"]
+    # canonical_url points at a jamalhansen.com/blog/<slug>/ page -- only
+    # meaningful for actual blog posts. Found live 2026-09-20: 28 published
+    # finds/newsletter issues were failing this requirement even though
+    # they were never blog posts and have no slug to derive one from --
+    # finds even ship a template canonical_url: "" placeholder that this
+    # rule was treating as "still needs filling."
+    require: [canonical_url]
