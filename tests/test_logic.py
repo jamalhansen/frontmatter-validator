@@ -81,7 +81,7 @@ template_specific: "value"
 
 
 def test_conditional_validation_logic(specs):
-    # Test that status: published requires published_date
+    # Test that status: published requires published_date and canonical_url
     content = """---
 category: "blog post"
 status: published
@@ -94,18 +94,35 @@ title: "Missing date"
     result = validate_content(content, specs, no_llm=True)
     assert not result.is_valid
     assert any("published_date" in e for e in result.errors)
+    assert any("canonical_url" in e for e in result.errors)
 
-    # Add the missing date
+    # Add the missing fields
     content_with_date = content.replace(
-        'published_date: ""', "published_date: 2026-03-26"
+        'canonical_url: ""',
+        'canonical_url: "https://example.com/post"\npublished_date: 2026-03-26',
     )
-    if "published_date:" not in content:
-        content_with_date = content.replace(
-            "status: published", "status: published\npublished_date: 2026-03-26"
-        )
 
     result2 = validate_content(content_with_date, specs, no_llm=True)
     assert result2.is_valid, f"Should be valid now: {result2.errors}"
+
+
+def test_draft_status_does_not_require_published_date_or_canonical_url(specs):
+    """Regression 2026-09-20: published_date and canonical_url used to be
+    listed as universal (required for every item regardless of status) --
+    real content showed ~95% of the resulting violations were on drafts,
+    outlines, and ideas that were never meant to have either yet. Both are
+    now conditional on status: published only, matching how the spec
+    already treated this distinction in principle."""
+    content = """---
+category: "blog post"
+status: draft
+created: 2026-03-26
+tags: []
+title: "A draft post"
+---
+"""
+    result = validate_content(content, specs, no_llm=True)
+    assert result.is_valid, f"A draft should not need published_date/canonical_url: {result.errors}"
 
 
 def test_load_specs_or_raise_invalid_yaml(tmp_path):

@@ -4,8 +4,6 @@ universal:
   - category
   - status
   - created
-  - published_date
-  - canonical_url
   - tags
 
 categories:
@@ -56,4 +54,4 @@ categories:
 validations:
   - field: status
     value: published
-    require: [published_date]
+    require: [published_date, canonical_url]
