@@ -99,3 +99,27 @@ def test_validate_pipe_and_json(mock_spec, tmp_path):
     assert res_json.exit_code == 0
     assert '"is_valid": true' in res_json.stdout
 
+
+def test_validate_json_with_real_date_field_does_not_crash(mock_spec, tmp_path):
+    """Regression: PyYAML parses an unquoted YAML date (e.g. "created:
+    2026-04-15") into a real datetime.date object, and json.dumps() can't
+    serialize that without a default= handler. Every real post has a
+    created/published_date field -- --json has likely never worked on real
+    content before this fix. Exercised in both the single-file and
+    directory-walk branches, since they build their JSON payload separately."""
+    content = "---\nCategory: blog post\nTitle: Dated Post\ncreated: 2026-04-15\n---\nContent"
+
+    test_file = tmp_path / "test.md"
+    test_file.write_text(content)
+    res_file = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--json"])
+    assert res_file.exit_code == 0
+    assert "not JSON serializable" not in res_file.output
+    assert '"created": "2026-04-15"' in res_file.stdout
+
+    (tmp_path / "dir1").mkdir()
+    (tmp_path / "dir1" / "p1.md").write_text(content)
+    res_dir = runner.invoke(app, [str(tmp_path / "dir1"), "--spec", str(mock_spec), "--json"])
+    assert res_dir.exit_code == 0
+    assert "not JSON serializable" not in res_dir.output
+    assert '"created": "2026-04-15"' in res_dir.stdout
+

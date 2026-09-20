@@ -122,6 +122,7 @@ def validate(
                         "suggestion": result.suggestion,
                     },
                     indent=2,
+                    default=str,
                 )
             )
             if not result.is_valid:
@@ -239,7 +240,7 @@ def validate(
         )
 
     if json_output:
-        print(json.dumps(results_json, indent=2))
+        print(json.dumps(results_json, indent=2, default=str))
         if invalid_count > 0 and not clean:
             raise typer.Exit(1)
         return
