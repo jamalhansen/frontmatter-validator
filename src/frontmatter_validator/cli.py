@@ -12,7 +12,6 @@ from local_first_common.cli import (
     json_option,
     no_llm_option,
     pipe_option,
-    resolve_dry_run,
     verbose_option,
 )
 from local_first_common.logging import setup_logging
@@ -24,6 +23,7 @@ from .core import (
     SpecLoadError,
     clean_category,
     clean_frontmatter,
+    compute_default_fills,
     get_allowed_fields,
     get_template_fields,
     load_specs,
@@ -62,9 +62,11 @@ def validate(
     fill_defaults: bool = typer.Option(
         False,
         "--fill-defaults",
-        help="Fill tags/created (safe defaults) and canonical_url-from-slug "
-        "(a derived guess for published posts) for missing fields. "
-        "category/status are never touched -- those are judgment calls.",
+        help="Fill missing 'created' from the filename's date prefix, or the "
+        "file's own mtime if there's no prefix. tags are handled by the real "
+        "obsidian-vault-auto-tagger tool instead; canonical_url-from-slug is "
+        "computed but not yet wired to write (a derived guess, needs its own "
+        "confirmed rollout). category/status are never touched -- judgment calls.",
     ),
     pipe: Annotated[bool, pipe_option()] = False,
     json_output: Annotated[bool, json_option()] = False,
@@ -74,7 +76,14 @@ def validate(
     init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ):
     """Validate Obsidian markdown frontmatter against Content Format Spec."""
-    dry_run = resolve_dry_run(dry_run, no_llm)
+    # Deliberately NOT resolve_dry_run(dry_run, no_llm): this tool's write
+    # actions (--clean, --fill-defaults) are fully deterministic, not
+    # LLM-derived -- dry_run only gates them, and no_llm only controls
+    # whether validate_content() generates a suggestion. The shared "no_llm
+    # implies dry_run" rule exists to stop tools from writing fake/mocked
+    # LLM output for real; it doesn't apply here, and silently defeated a
+    # real --fill-defaults run: --no-llm was passed (correctly, to skip
+    # suggestion generation) but nothing was written because of this.
 
     log_level = logging.DEBUG if verbose else logging.WARNING
     setup_logging(level=log_level, tool_name=TOOL_NAME, persist_warnings=True)
@@ -172,6 +181,7 @@ def validate(
     valid_count = 0
     invalid_count = 0
     cleaned_count = 0
+    filled_count = 0
     results_json = []
 
     for file in files:
@@ -201,24 +211,54 @@ def validate(
             template_fields=template_fields,
         )
 
-        action_msg = ""
+        action_msgs = []
+        pending_metadata = dict(result.metadata)
+        needs_write = False
+
         if clean:
             allowed = get_allowed_fields(category, specs)
             if template_fields:
                 allowed.update(template_fields)
 
-            cleaned_metadata = clean_frontmatter(result.metadata, allowed)
-            if len(cleaned_metadata) < len(result.metadata):
-                removed = set(result.metadata.keys()) - set(cleaned_metadata.keys())
-                action_msg = f"[bold yellow]CLEANED[/bold yellow] (removed: {', '.join(removed)})"
-                if not dry_run:
-                    post.metadata = cleaned_metadata
-                    file.write_text(frontmatter.dumps(post), encoding="utf-8")
-                    cleaned_count += 1
+            cleaned_metadata = clean_frontmatter(pending_metadata, allowed)
+            if len(cleaned_metadata) < len(pending_metadata):
+                removed = set(pending_metadata.keys()) - set(cleaned_metadata.keys())
+                pending_metadata = cleaned_metadata
+                if dry_run:
+                    action_msgs.append(f"[dry-run] Would remove: {', '.join(removed)}")
                 else:
-                    action_msg = f"[dry-run] Would remove: {', '.join(removed)}"
+                    action_msgs.append(f"[bold yellow]CLEANED[/bold yellow] (removed: {', '.join(removed)})")
+                    needs_write = True
+                    cleaned_count += 1
             else:
-                action_msg = "No cleaning needed"
+                action_msgs.append("No cleaning needed")
+
+        if fill_defaults:
+            fills = compute_default_fills(pending_metadata, file)
+            # Scoped to 'created' for now -- tags are handled by the real
+            # obsidian-vault-auto-tagger tool, and canonical_url is a derived
+            # guess that needs its own visible-confirmation rollout before
+            # this writes it unattended.
+            created_fill = fills.get("created")
+            if created_fill:
+                value, reason = created_fill
+                pending_metadata["created"] = value
+                if dry_run:
+                    action_msgs.append(f"[dry-run] Would fill created={value} ({reason})")
+                else:
+                    action_msgs.append(f"[bold cyan]FILLED[/bold cyan] created={value} ({reason})")
+                    needs_write = True
+                    filled_count += 1
+            skipped = {k: v for k, v in fills.items() if k != "created"}
+            if skipped:
+                skipped_str = ", ".join(f"{k}={v[0]}" for k, v in skipped.items())
+                action_msgs.append(f"[dim]Not filled (not yet wired): {skipped_str}[/dim]")
+
+        if needs_write:
+            post.metadata = pending_metadata
+            file.write_text(frontmatter.dumps(post), encoding="utf-8")
+
+        action_msg = "\n".join(action_msgs)
 
         status = "[green]PASS[/green]" if result.is_valid else "[red]FAIL[/red]"
         error_str = "\n".join(result.errors) if result.errors else ""
@@ -248,7 +288,7 @@ def validate(
 
     if json_output:
         print(json.dumps(results_json, indent=2, default=str))
-        if invalid_count > 0 and not clean:
+        if invalid_count > 0 and not clean and not fill_defaults:
             raise typer.Exit(1)
         return
 
@@ -256,9 +296,11 @@ def validate(
     summary = f"\nSummary: {valid_count} passed, {invalid_count} failed."
     if cleaned_count > 0:
         summary += f" {cleaned_count} files cleaned."
+    if filled_count > 0:
+        summary += f" {filled_count} files filled."
     typer.echo(summary)
 
-    if invalid_count > 0 and not clean:
+    if invalid_count > 0 and not clean and not fill_defaults:
         raise typer.Exit(1)
 
 

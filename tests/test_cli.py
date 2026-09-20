@@ -84,6 +84,76 @@ def test_validate_clean_real(mock_spec, tmp_path):
     assert "Extra: field" not in test_file.read_text()
 
 
+def test_validate_clean_real_with_no_llm_still_writes(mock_spec, tmp_path):
+    """Regression 2026-09-20: this tool's write actions (--clean,
+    --fill-defaults) are deterministic, not LLM-derived, so --no-llm must
+    NOT silently force dry-run here the way it does fleet-wide for tools
+    whose writes come from LLM output. Found live: a real --fill-defaults
+    run against BrainSync with --no-llm (needed to skip suggestion
+    generation) wrote nothing at all."""
+    test_file = tmp_path / "test.md"
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\nExtra: field\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--clean", "--no-llm"])
+    assert result.exit_code == 0
+    assert "Extra: field" not in test_file.read_text()
+
+
+def test_validate_fill_defaults_dry_run(mock_spec, tmp_path):
+    test_file = tmp_path / "2026-04-04-test.md"
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults", "--dry-run"])
+    assert result.exit_code == 0
+    assert "files filled" not in result.stdout
+
+    # File should not be modified
+    assert "created" not in test_file.read_text()
+
+
+def test_validate_fill_defaults_real_writes_created_from_filename(mock_spec, tmp_path):
+    test_file = tmp_path / "2026-04-04-test.md"
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults"])
+    assert result.exit_code == 0
+    assert "1 files filled" in result.stdout
+
+    written = test_file.read_text()
+    assert "created: 2026-04-04" in written
+
+
+def test_validate_fill_defaults_with_no_llm_still_writes(mock_spec, tmp_path):
+    """Same regression as --clean: --no-llm must not force dry-run for this
+    tool's deterministic write actions."""
+    test_file = tmp_path / "2026-04-04-test.md"
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults", "--no-llm"])
+    assert result.exit_code == 0
+    assert "created: 2026-04-04" in test_file.read_text()
+
+
+def test_validate_fill_defaults_falls_back_to_mtime_without_date_prefix(mock_spec, tmp_path):
+    test_file = tmp_path / "test.md"
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults"])
+    assert result.exit_code == 0
+    assert "1 files filled" in result.stdout
+    assert "created:" in test_file.read_text()
+
+
+def test_validate_fill_defaults_does_not_touch_existing_created(mock_spec, tmp_path):
+    test_file = tmp_path / "2026-04-04-test.md"
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\ncreated: 2020-01-01\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults"])
+    assert result.exit_code == 0
+    assert "files filled" not in result.stdout
+    assert "created: 2020-01-01" in test_file.read_text()
+
+
 def test_validate_pipe_and_json(mock_spec, tmp_path):
     content = "---\ncategory: blog post\nTitle: Piped Post\n---\nPiped content"
     

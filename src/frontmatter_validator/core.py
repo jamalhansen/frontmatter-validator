@@ -224,8 +224,22 @@ def compute_default_fills(
         except (ValueError, IndexError):
             import datetime as _dt
 
-            mtime = _dt.datetime.fromtimestamp(file_path.stat().st_mtime).date()  # noqa: DTZ006 - a file mtime is inherently local time, not a timestamp to persist across timezones
-            fills["created"] = (mtime, "no date prefix in filename -- fell back to file mtime")
+            st = file_path.stat()
+            # Prefer filesystem birthtime (APFS/macOS) over mtime: mtime is
+            # whatever the file last happened to be edited/rewritten, which
+            # any bulk pass (e.g. an auto-tagging run) resets to "now" --
+            # confirmed 2026-09-20 against a file with a real, already-set
+            # created date: its birthtime matched exactly, its mtime (from
+            # a same-day tagging run) did not. birthtime isn't available on
+            # every filesystem, so fall back to mtime when it's missing.
+            birthtime = getattr(st, "st_birthtime", None)
+            if birthtime is not None:
+                fill_date = _dt.datetime.fromtimestamp(birthtime).date()  # noqa: DTZ006 - a file birthtime is inherently local time, not a timestamp to persist across timezones
+                reason = "no date prefix in filename -- fell back to file creation time"
+            else:
+                fill_date = _dt.datetime.fromtimestamp(st.st_mtime).date()  # noqa: DTZ006 - a file mtime is inherently local time, not a timestamp to persist across timezones
+                reason = "no date prefix in filename -- fell back to file mtime (birthtime unavailable)"
+            fills["created"] = (fill_date, reason)
 
     slug = metadata.get("slug")
     if not metadata.get("canonical_url") and metadata.get("status") == "published" and slug:
