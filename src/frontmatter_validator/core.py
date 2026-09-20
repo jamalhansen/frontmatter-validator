@@ -183,6 +183,60 @@ def clean_frontmatter(
     return {k: v for k, v in metadata.items() if k in allowed_fields}
 
 
+# https://jamalhansen.com/blog/<slug>/ -- confirmed 2026-09-20 against 55 real
+# published posts that already carry both fields: 52/55 matched this pattern
+# exactly. The 3 exceptions: 2 older posts published without the /blog/
+# prefix, and 1 case where slug had drifted from the real published URL
+# after the fact. Not 100% reliable -- this is why fill_missing_defaults()
+# always requires an explicit, visible confirmation before writing it,
+# never a silent overwrite.
+_CANONICAL_URL_TEMPLATE = "https://jamalhansen.com/blog/{slug}/"
+
+
+def compute_default_fills(
+    metadata: dict[str, Any], file_path: Path
+) -> dict[str, tuple[Any, str]]:
+    """Return {field: (value, reason)} for fields that are missing (or
+    present but empty) and have a safe or well-evidenced default -- never
+    for category/status, which are content judgment calls this can't make.
+
+    tags/created are genuinely safe: an empty list is always a valid "not
+    set yet" state, and a date is either read straight from a YYYY-MM-DD
+    filename prefix or falls back to the file's own mtime -- never
+    fabricated. canonical_url is different: it's a *derived guess* (see
+    _CANONICAL_URL_TEMPLATE), only offered when status is already published
+    and a slug exists, and the caller is expected to show it before writing,
+    not apply it blind.
+    """
+    fills: dict[str, tuple[Any, str]] = {}
+
+    if not metadata.get("tags"):
+        fills["tags"] = ([], "no tags set yet")
+
+    if not metadata.get("created"):
+        stem = file_path.stem
+        date_prefix = stem[:10]
+        try:
+            from datetime import date
+
+            year, month, day = (int(p) for p in date_prefix.split("-"))
+            fills["created"] = (date(year, month, day), "parsed from the filename's date prefix")
+        except (ValueError, IndexError):
+            import datetime as _dt
+
+            mtime = _dt.datetime.fromtimestamp(file_path.stat().st_mtime).date()  # noqa: DTZ006 - a file mtime is inherently local time, not a timestamp to persist across timezones
+            fills["created"] = (mtime, "no date prefix in filename -- fell back to file mtime")
+
+    slug = metadata.get("slug")
+    if not metadata.get("canonical_url") and metadata.get("status") == "published" and slug:
+        fills["canonical_url"] = (
+            _CANONICAL_URL_TEMPLATE.format(slug=slug),
+            "derived from slug -- verify this matches the real published URL before trusting it",
+        )
+
+    return fills
+
+
 def get_template_fields(template_path: Path) -> set[str]:
     """Extract frontmatter field names from an Obsidian template."""
     if not template_path.exists():

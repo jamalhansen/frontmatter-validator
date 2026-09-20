@@ -59,6 +59,13 @@ def validate(
     clean: bool = typer.Option(
         False, "--clean", help="Remove unused frontmatter fields NOT in spec"
     ),
+    fill_defaults: bool = typer.Option(
+        False,
+        "--fill-defaults",
+        help="Fill tags/created (safe defaults) and canonical_url-from-slug "
+        "(a derived guess for published posts) for missing fields. "
+        "category/status are never touched -- those are judgment calls.",
+    ),
     pipe: Annotated[bool, pipe_option()] = False,
     json_output: Annotated[bool, json_option()] = False,
     dry_run: Annotated[bool, dry_run_option()] = False,
