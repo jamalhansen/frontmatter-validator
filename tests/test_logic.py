@@ -8,6 +8,7 @@ from frontmatter_validator.logic import (
     ValidationResult,
     clean_category,
     clean_frontmatter,
+    get_allowed_fields,
     load_specs,
     load_specs_or_raise,
     parse_frontmatter_or_raise,
@@ -124,6 +125,22 @@ title: "Missing date"
 
     result2 = validate_content(content_with_date, specs, no_llm=True)
     assert result2.is_valid, f"Should be valid now: {result2.errors}"
+
+
+@pytest.mark.parametrize("category", ["blog post", "find", "newsletter"])
+def test_published_date_survives_clean_for_categories_that_can_be_published(specs, category):
+    """Regression 2026-09-20: published_date (required for any published item)
+    wasn't in any category's allowed fields list -- --clean would have
+    silently stripped it from every published post, find, or newsletter
+    issue the first time anyone ran it, even though the field was correctly
+    set and required. Latent (never triggered live), caught before it was."""
+    allowed = get_allowed_fields(category, specs)
+    assert "published_date" in allowed
+
+
+def test_canonical_url_survives_clean_for_blog_posts(specs):
+    allowed = get_allowed_fields("blog post", specs)
+    assert "canonical_url" in allowed
 
 
 def test_published_find_does_not_require_canonical_url(specs):

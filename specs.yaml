@@ -26,6 +26,8 @@ categories:
       - unsplash_user
       - draft
       - weight
+      - published_date
+      - canonical_url
   "find":
     aliases: ["find", "[[find]]"]
     fields:
@@ -35,6 +37,7 @@ categories:
       - source_type
       - captured
       - related
+      - published_date
   "newsletter":
     aliases: ["newsletter", "[[newsletter]]"]
     fields:
@@ -47,6 +50,7 @@ categories:
       - title
       - subtitle
       - type
+      - published_date
   "standalone":
     aliases: ["standalone", "[[standalone]]"]
     fields: []
