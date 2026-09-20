@@ -1,7 +1,7 @@
 # Content Format Spec Configuration
 
 universal:
-  - Category
+  - category
   - status
   - created
   - published_date

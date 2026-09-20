@@ -10,14 +10,14 @@ runner = CliRunner()
 def mock_spec(tmp_path):
     spec_path = tmp_path / "specs.yaml"
     spec_content = {
-        "universal": ["Category"],
+        "universal": ["category"],
         "categories": {
             "blog post": {"fields": ["Title", "Author", "Tags"]},
             "find": {"fields": ["Title", "URL"]}
         },
         "validations": [
             {
-                "field": "Category",
+                "field": "category",
                 "value": "blog post",
                 "require": ["Title"]
             }
@@ -28,7 +28,7 @@ def mock_spec(tmp_path):
 
 def test_validate_file_pass(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
-    test_file.write_text("---\nCategory: blog post\nTitle: My Post\n---\nContent")
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\n---\nContent")
     
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec)])
     assert result.exit_code == 0
@@ -36,7 +36,7 @@ def test_validate_file_pass(mock_spec, tmp_path):
 
 def test_validate_file_fail(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
-    test_file.write_text("---\nCategory: blog post\n---\nContent")
+    test_file.write_text("---\ncategory: blog post\n---\nContent")
     
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec)])
     assert result.exit_code == 1
@@ -46,9 +46,9 @@ def test_validate_file_fail(mock_spec, tmp_path):
 def test_validate_directory(mock_spec, tmp_path):
     (tmp_path / "dir1").mkdir()
     f1 = tmp_path / "dir1" / "p1.md"
-    f1.write_text("---\nCategory: blog post\nTitle: P1\n---\nContent")
+    f1.write_text("---\ncategory: blog post\nTitle: P1\n---\nContent")
     f2 = tmp_path / "dir1" / "p2.md"
-    f2.write_text("---\nCategory: find\nTitle: P2\n---\nContent")
+    f2.write_text("---\ncategory: find\nTitle: P2\n---\nContent")
     
     result = runner.invoke(app, [str(tmp_path / "dir1"), "--spec", str(mock_spec)])
     assert result.exit_code == 0
@@ -61,7 +61,7 @@ def test_validate_path_not_found():
 
 def test_validate_clean_dry_run(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
-    test_file.write_text("---\nCategory: blog post\nTitle: My Post\nExtra: field\n---\nContent")
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\nExtra: field\n---\nContent")
     
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--clean", "--dry-run"])
     assert result.exit_code == 0
@@ -74,7 +74,7 @@ def test_validate_clean_dry_run(mock_spec, tmp_path):
 
 def test_validate_clean_real(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
-    test_file.write_text("---\nCategory: blog post\nTitle: My Post\nExtra: field\n---\nContent")
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\nExtra: field\n---\nContent")
     
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--clean"])
     assert result.exit_code == 0
@@ -85,7 +85,7 @@ def test_validate_clean_real(mock_spec, tmp_path):
 
 
 def test_validate_pipe_and_json(mock_spec, tmp_path):
-    content = "---\nCategory: blog post\nTitle: Piped Post\n---\nPiped content"
+    content = "---\ncategory: blog post\nTitle: Piped Post\n---\nPiped content"
     
     # Test pipe pass
     res_pipe = runner.invoke(app, ["-", "--spec", str(mock_spec)], input=content)
@@ -107,7 +107,7 @@ def test_validate_json_with_real_date_field_does_not_crash(mock_spec, tmp_path):
     created/published_date field -- --json has likely never worked on real
     content before this fix. Exercised in both the single-file and
     directory-walk branches, since they build their JSON payload separately."""
-    content = "---\nCategory: blog post\nTitle: Dated Post\ncreated: 2026-04-15\n---\nContent"
+    content = "---\ncategory: blog post\nTitle: Dated Post\ncreated: 2026-04-15\n---\nContent"
 
     test_file = tmp_path / "test.md"
     test_file.write_text(content)
@@ -122,4 +122,32 @@ def test_validate_json_with_real_date_field_does_not_crash(mock_spec, tmp_path):
     assert res_dir.exit_code == 0
     assert "not JSON serializable" not in res_dir.output
     assert '"created": "2026-04-15"' in res_dir.stdout
+
+
+def test_validate_lowercase_category_passes(mock_spec, tmp_path):
+    """Regression 2026-09-20: the field check used to hardcode "Category"
+    (capital C), but real vault content consistently uses lowercase
+    "category:" -- a Python dict lookup by exact key, so every real file
+    failed with "Missing 'Category' field" regardless of actual validity.
+    Confirmed against real BrainSync content before this fix: 306/306 files
+    flagged invalid, 100% false positives."""
+    test_file = tmp_path / "test.md"
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec)])
+    assert result.exit_code == 0
+    assert "PASS" in result.stdout
+
+
+def test_validate_uppercase_category_key_is_a_real_distinct_yaml_key(mock_spec, tmp_path):
+    """Documents the real behavior, not just asserts it: YAML/dict keys are
+    case-sensitive, so "Category:" and "category:" are genuinely different
+    keys -- this isn't case-INsensitive matching, the spec and check were
+    just changed to match what real content actually uses."""
+    test_file = tmp_path / "test.md"
+    test_file.write_text("---\nCategory: blog post\nTitle: My Post\n---\nContent")
+
+    result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec)])
+    assert result.exit_code == 1
+    assert "Missing 'category' field" in result.stdout
 

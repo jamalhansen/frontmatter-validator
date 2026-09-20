@@ -8,7 +8,7 @@ objectively correct answer straight from specs.yaml -- no Claude ground truth ne
 no subjective judgment call. This eval exists to prove that, not assume it.
 
 Fixtures reflect the actual error shapes validate_content() produces (checked against
-core.py 2026-09-14): missing 'Category', a missing universal field, or status=published
+core.py 2026-09-14): missing 'category', a missing universal field, or status=published
 without published_date. NOT category-name typos -- clean_category() doesn't currently
 flag an unrecognized category as an error, so that's not a real code path today despite
 the LLM prompt's "did you mean article?" example suggesting otherwise.
@@ -30,32 +30,32 @@ class Fixture:
 FIXTURES = [
     Fixture(
         name="missing_category",
-        errors=["Missing 'Category' field"],
+        errors=["Missing 'category' field"],
         metadata={"status": "draft", "created": "2026-09-14"},
         expected_keyword="category",
     ),
     Fixture(
         name="missing_status",
         errors=["Missing universal field: 'status'"],
-        metadata={"Category": "blog post", "created": "2026-09-14"},
+        metadata={"category": "blog post", "created": "2026-09-14"},
         expected_keyword="status",
     ),
     Fixture(
         name="missing_tags",
         errors=["Missing universal field: 'tags'"],
-        metadata={"Category": "find", "status": "kept", "created": "2026-09-14"},
+        metadata={"category": "find", "status": "kept", "created": "2026-09-14"},
         expected_keyword="tags",
     ),
     Fixture(
         name="missing_canonical_url",
         errors=["Missing universal field: 'canonical_url'"],
-        metadata={"Category": "blog post", "status": "published", "created": "2026-09-14"},
+        metadata={"category": "blog post", "status": "published", "created": "2026-09-14"},
         expected_keyword="canonical_url",
     ),
     Fixture(
         name="published_missing_date",
         errors=["'published_date' is required when status is 'published'"],
-        metadata={"Category": "blog post", "status": "published", "created": "2026-09-14"},
+        metadata={"category": "blog post", "status": "published", "created": "2026-09-14"},
         expected_keyword="published_date",
     ),
 ]

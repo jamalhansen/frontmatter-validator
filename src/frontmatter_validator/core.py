@@ -129,11 +129,11 @@ def validate_content(
 
     errors = []
 
-    if "Category" not in metadata:
-        errors.append("Missing 'Category' field")
+    if "category" not in metadata:
+        errors.append("Missing 'category' field")
         return ValidationResult(is_valid=False, errors=errors, metadata=metadata)
 
-    category_raw = metadata["Category"]
+    category_raw = metadata["category"]
     category = clean_category(category_raw, specs)
 
     allowed_fields = get_allowed_fields(category, specs)

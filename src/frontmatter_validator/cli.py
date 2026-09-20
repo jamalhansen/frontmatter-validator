@@ -86,7 +86,7 @@ def validate(
             post = parse_frontmatter_or_raise(content)
         except FrontmatterParseError:
             post = frontmatter.Post("")
-        category_raw = post.metadata.get("Category", "")
+        category_raw = post.metadata.get("category", "")
         category = clean_category(category_raw, specs)
 
         template_fields = None
@@ -175,7 +175,7 @@ def validate(
             post = parse_frontmatter_or_raise(content)
         except FrontmatterParseError:
             post = frontmatter.Post("")
-        category_raw = post.metadata.get("Category", "")
+        category_raw = post.metadata.get("category", "")
         category = clean_category(category_raw, specs)
 
         template_fields = None

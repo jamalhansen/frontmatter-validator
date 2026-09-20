@@ -21,7 +21,7 @@ def specs():
 
 def test_validate_blog_post_valid(specs):
     content = """---
-Category: "[[Blog Post]]"
+category: "[[Blog Post]]"
 status: draft
 created: 2026-03-26
 published_date: ""
@@ -39,7 +39,7 @@ title: "My First Post"
 
 def test_validate_published_missing_date(specs):
     content = """---
-Category: "blog post"
+category: "blog post"
 status: published
 created: 2026-03-26
 canonical_url: ""
@@ -54,17 +54,17 @@ title: "My Published Post"
 
 
 def test_clean_frontmatter():
-    metadata = {"Category": "blog post", "status": "draft", "extra_field": "remove me"}
-    allowed = {"Category", "status"}
+    metadata = {"category": "blog post", "status": "draft", "extra_field": "remove me"}
+    allowed = {"category", "status"}
     cleaned = clean_frontmatter(metadata, allowed)
-    assert "Category" in cleaned
+    assert "category" in cleaned
     assert "status" in cleaned
     assert "extra_field" not in cleaned
 
 
 def test_validate_with_template_fields(specs):
     content = """---
-Category: "blog post"
+category: "blog post"
 status: draft
 created: 2026-03-26
 published_date: ""
@@ -83,7 +83,7 @@ template_specific: "value"
 def test_conditional_validation_logic(specs):
     # Test that status: published requires published_date
     content = """---
-Category: "blog post"
+category: "blog post"
 status: published
 created: 2026-03-26
 canonical_url: ""

@@ -7,7 +7,7 @@ def test_fixtures_cover_the_real_error_shapes_validate_content_produces():
     # Guards against the eval drifting from what the tool actually does --
     # these three shapes are the only ones validate_content() raises today.
     error_texts = " ".join(" ".join(fx.errors) for fx in FIXTURES)
-    assert "Missing 'Category' field" in error_texts
+    assert "Missing 'category' field" in error_texts
     assert "Missing universal field" in error_texts
     assert "published_date" in error_texts
 
