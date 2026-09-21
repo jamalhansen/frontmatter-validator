@@ -4,7 +4,6 @@ from typing import Any
 import frontmatter
 import yaml
 from local_first_common.cli import resolve_provider
-from local_first_common.tracking import timed_run
 from pydantic import BaseModel
 
 
@@ -101,10 +100,9 @@ def get_fuzzy_suggestions(
         if verbose:
             print("🧠 Asking LLM for fuzzy suggestions...")
 
-        with timed_run("frontmatter-validator", llm.model) as _run:
-            suggestion = llm.complete(system, user)
-            _run.item_count = 1
-            return suggestion.strip()
+        llm.item_count = 1
+        suggestion = llm.complete(system, user)
+        return suggestion.strip()
     except Exception as e:  # noqa: BLE001 - LLM suggestion is optional/best-effort; any failure should degrade to no suggestion, not crash validation
         if verbose:
             print(f"⚠️  LLM suggestion failed: {e}")
