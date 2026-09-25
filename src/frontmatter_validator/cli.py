@@ -15,6 +15,7 @@ from local_first_common.cli import (
     verbose_option,
 )
 from local_first_common.logging import setup_logging
+from local_first_common.tracking import register_tool
 from rich.console import Console
 from rich.table import Table
 
@@ -30,6 +31,8 @@ from .core import (
     parse_frontmatter_or_raise,
     validate_content,
 )
+
+_TOOL = register_tool("frontmatter-validator")
 
 TOOL_NAME = "frontmatter-validator"
 DEFAULTS = {"provider": "ollama", "model": "llama3.2:3b"}
