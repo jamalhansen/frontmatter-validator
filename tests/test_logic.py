@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from frontmatter_validator.logic import (
+from frontmatter_validator.core import (
     FrontmatterParseError,
     SpecLoadError,
     ValidationResult,
