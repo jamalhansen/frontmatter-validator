@@ -96,7 +96,7 @@ def validate(
         specs = load_specs(spec)
     except SpecLoadError as e:
         typer.secho(f"Error: {e}", fg=typer.colors.RED)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     is_pipe = pipe or (path is not None and str(path) == "-")
 
