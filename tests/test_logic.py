@@ -95,9 +95,7 @@ template_specific: "value"
 ---
 """
     template_fields = {"template_specific"}
-    result = validate_content(
-        content, specs, no_llm=True, template_fields=template_fields
-    )
+    result = validate_content(content, specs, no_llm=True, template_fields=template_fields)
     assert result.is_valid, f"Validation failed with errors: {result.errors}"
 
 

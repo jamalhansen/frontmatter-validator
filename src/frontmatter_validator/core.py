@@ -166,9 +166,7 @@ def validate_content(
 
     suggestion = None
     if errors:
-        suggestion = get_fuzzy_suggestions(
-            errors, metadata, no_llm=no_llm, verbose=verbose
-        )
+        suggestion = get_fuzzy_suggestions(errors, metadata, no_llm=no_llm, verbose=verbose)
 
     return ValidationResult(
         is_valid=len(errors) == 0,
@@ -178,9 +176,7 @@ def validate_content(
     )
 
 
-def clean_frontmatter(
-    metadata: dict[str, Any], allowed_fields: set[str]
-) -> dict[str, Any]:
+def clean_frontmatter(metadata: dict[str, Any], allowed_fields: set[str]) -> dict[str, Any]:
     """Remove fields NOT in the allowed set."""
     return {k: v for k, v in metadata.items() if k in allowed_fields}
 
@@ -195,9 +191,7 @@ def clean_frontmatter(
 _CANONICAL_URL_TEMPLATE = "https://jamalhansen.com/blog/{slug}/"
 
 
-def compute_default_fills(
-    metadata: dict[str, Any], file_path: Path
-) -> dict[str, tuple[Any, str]]:
+def compute_default_fills(metadata: dict[str, Any], file_path: Path) -> dict[str, tuple[Any, str]]:
     """Return {field: (value, reason)} for fields that are missing (or
     present but empty) and have a safe or well-evidenced default -- never
     for category/status, which are content judgment calls this can't make.

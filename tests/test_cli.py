@@ -6,42 +6,37 @@ from frontmatter_validator.cli import app
 
 runner = CliRunner()
 
+
 @pytest.fixture
 def mock_spec(tmp_path):
     spec_path = tmp_path / "specs.yaml"
     spec_content = {
         "universal": ["category"],
-        "categories": {
-            "blog post": {"fields": ["Title", "Author", "Tags"]},
-            "find": {"fields": ["Title", "URL"]}
-        },
-        "validations": [
-            {
-                "field": "category",
-                "value": "blog post",
-                "require": ["Title"]
-            }
-        ]
+        "categories": {"blog post": {"fields": ["Title", "Author", "Tags"]}, "find": {"fields": ["Title", "URL"]}},
+        "validations": [{"field": "category", "value": "blog post", "require": ["Title"]}],
     }
     spec_path.write_text(yaml.dump(spec_content))
     return spec_path
 
+
 def test_validate_file_pass(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
     test_file.write_text("---\ncategory: blog post\nTitle: My Post\n---\nContent")
-    
+
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec)])
     assert result.exit_code == 0
     assert "PASS" in result.stdout
 
+
 def test_validate_file_fail(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
     test_file.write_text("---\ncategory: blog post\n---\nContent")
-    
+
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec)])
     assert result.exit_code == 1
     assert "FAIL" in result.stdout
     assert "Field 'Title' is" in result.stdout
+
 
 def test_validate_directory(mock_spec, tmp_path):
     (tmp_path / "dir1").mkdir()
@@ -49,37 +44,40 @@ def test_validate_directory(mock_spec, tmp_path):
     f1.write_text("---\ncategory: blog post\nTitle: P1\n---\nContent")
     f2 = tmp_path / "dir1" / "p2.md"
     f2.write_text("---\ncategory: find\nTitle: P2\n---\nContent")
-    
+
     result = runner.invoke(app, [str(tmp_path / "dir1"), "--spec", str(mock_spec)])
     assert result.exit_code == 0
     assert "PASS" in result.stdout
+
 
 def test_validate_path_not_found():
     result = runner.invoke(app, ["nonexistent.md"])
     assert result.exit_code == 1
     assert "Error: Path 'nonexistent.md' not found" in result.stdout
 
+
 def test_validate_clean_dry_run(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
     test_file.write_text("---\ncategory: blog post\nTitle: My Post\nExtra: field\n---\nContent")
-    
+
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--clean", "--dry-run"])
     assert result.exit_code == 0
     # The output might have different formatting, let's just check for the key parts
     assert "CLEANED" in result.stdout or "Would remove" in result.stdout
     assert "Extra" in result.stdout
-    
+
     # File should not be modified
     assert "Extra: field" in test_file.read_text()
+
 
 def test_validate_clean_real(mock_spec, tmp_path):
     test_file = tmp_path / "test.md"
     test_file.write_text("---\ncategory: blog post\nTitle: My Post\nExtra: field\n---\nContent")
-    
+
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--clean"])
     assert result.exit_code == 0
     assert "CLEANED" in result.stdout
-    
+
     # File SHOULD be modified
     assert "Extra: field" not in test_file.read_text()
 
@@ -125,10 +123,7 @@ def test_validate_fill_defaults_real_writes_created_from_filename(mock_spec, tmp
 
 def test_validate_fill_defaults_writes_canonical_url_for_published_blog_post(mock_spec, tmp_path):
     test_file = tmp_path / "2026-04-04-test.md"
-    test_file.write_text(
-        "---\ncategory: blog post\nTitle: My Post\nstatus: published\n"
-        "slug: my-post\n---\nContent"
-    )
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\nstatus: published\nslug: my-post\n---\nContent")
 
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults"])
     assert result.exit_code == 0
@@ -139,10 +134,7 @@ def test_validate_fill_defaults_writes_canonical_url_for_published_blog_post(moc
 
 def test_validate_fill_defaults_does_not_touch_canonical_url_for_draft(mock_spec, tmp_path):
     test_file = tmp_path / "2026-04-04-test.md"
-    test_file.write_text(
-        "---\ncategory: blog post\nTitle: My Post\nstatus: draft\n"
-        "slug: my-post\n---\nContent"
-    )
+    test_file.write_text("---\ncategory: blog post\nTitle: My Post\nstatus: draft\nslug: my-post\n---\nContent")
 
     runner.invoke(app, [str(test_file), "--spec", str(mock_spec), "--fill-defaults"])
     assert "canonical_url" not in test_file.read_text()
@@ -181,7 +173,7 @@ def test_validate_fill_defaults_does_not_touch_existing_created(mock_spec, tmp_p
 
 def test_validate_pipe_and_json(mock_spec, tmp_path):
     content = "---\ncategory: blog post\nTitle: Piped Post\n---\nPiped content"
-    
+
     # Test pipe pass
     res_pipe = runner.invoke(app, ["-", "--spec", str(mock_spec)], input=content)
     assert res_pipe.exit_code == 0
@@ -245,4 +237,3 @@ def test_validate_uppercase_category_key_is_a_real_distinct_yaml_key(mock_spec, 
     result = runner.invoke(app, [str(test_file), "--spec", str(mock_spec)])
     assert result.exit_code == 1
     assert "Missing 'category' field" in result.stdout
-

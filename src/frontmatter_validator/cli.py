@@ -53,15 +53,13 @@ def validate(
         Path | None,
         typer.Argument(help="File or directory to validate (or '-' for stdin)"),
     ] = None,
-    spec: Annotated[
-        Path | None, typer.Option("--spec", help="Path to custom validation spec YAML")
-    ] = Path("specs.yaml"),
+    spec: Annotated[Path | None, typer.Option("--spec", help="Path to custom validation spec YAML")] = Path(
+        "specs.yaml"
+    ),
     template_dir: Annotated[
         Path | None, typer.Option("--template-dir", help="Path to Obsidian templates directory")
     ] = None,
-    clean: bool = typer.Option(
-        False, "--clean", help="Remove unused frontmatter fields NOT in spec"
-    ),
+    clean: bool = typer.Option(False, "--clean", help="Remove unused frontmatter fields NOT in spec"),
     fill_defaults: bool = typer.Option(
         False,
         "--fill-defaults",
@@ -307,7 +305,6 @@ def validate(
 
     if invalid_count > 0 and not clean and not fill_defaults:
         raise typer.Exit(1)
-
 
 
 if __name__ == "__main__":
