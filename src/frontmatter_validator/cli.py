@@ -53,9 +53,7 @@ def validate(
         Path | None,
         typer.Argument(help="File or directory to validate (or '-' for stdin)"),
     ] = None,
-    spec: Annotated[Path | None, typer.Option("--spec", help="Path to custom validation spec YAML")] = Path(
-        "specs.yaml"
-    ),
+    spec: Annotated[Path, typer.Option("--spec", help="Path to custom validation spec YAML")] = Path("specs.yaml"),
     template_dir: Annotated[
         Path | None, typer.Option("--template-dir", help="Path to Obsidian templates directory")
     ] = None,
@@ -105,7 +103,7 @@ def validate(
         except FrontmatterParseError:
             post = frontmatter.Post("")
         category_raw = post.metadata.get("category", "")
-        category = clean_category(category_raw, specs)
+        category = clean_category(str(category_raw), specs)
 
         template_fields = None
         if template_dir and category in TEMPLATE_MAP:
@@ -195,7 +193,7 @@ def validate(
         except FrontmatterParseError:
             post = frontmatter.Post("")
         category_raw = post.metadata.get("category", "")
-        category = clean_category(category_raw, specs)
+        category = clean_category(str(category_raw), specs)
 
         template_fields = None
         if template_dir and category in TEMPLATE_MAP:

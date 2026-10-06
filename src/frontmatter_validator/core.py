@@ -132,7 +132,7 @@ def validate_content(
         return ValidationResult(is_valid=False, errors=errors, metadata=metadata)
 
     category_raw = metadata["category"]
-    category = clean_category(category_raw, specs)
+    category = clean_category(str(category_raw), specs)
 
     allowed_fields = get_allowed_fields(category, specs)
     if template_fields:
