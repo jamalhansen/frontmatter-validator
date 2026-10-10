@@ -145,11 +145,18 @@ def validate_content(
         if field not in metadata:
             errors.append(f"Missing universal field: '{field}'")
 
-    # 2. Check category fields (optional for now, or we can define them as required in specs if needed)
+    # 2. A category can pin its status vocabulary; a value outside it is a typo or a
+    #    private word the other tools won't act on.
+    statuses = specs.get("categories", {}).get(category, {}).get("statuses")
+    status = metadata.get("status")
+    if statuses and status is not None and str(status).strip().lower() not in [str(s).lower() for s in statuses]:
+        errors.append(f"status {status!r} is not one of {', '.join(str(s) for s in statuses)}")
+
+    # 3. Check category fields (optional for now, or we can define them as required in specs if needed)
     # For now, let's just use the allowed set to flag "Unknown" fields if we want, but
     # validation is mostly about ensuring required fields exist.
 
-    # 3. Custom Validations
+    # 4. Custom Validations
     for v in specs.get("validations", []):
         field = v.get("field")
         val = v.get("value")

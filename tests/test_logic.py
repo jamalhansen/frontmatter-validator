@@ -212,3 +212,19 @@ def test_parse_frontmatter_or_raise_invalid_content():
 
     with pytest.raises(FrontmatterParseError):
         parse_frontmatter_or_raise(bad_content)
+
+
+def test_blog_post_status_outside_the_spec_vocabulary_is_an_error(specs):
+    content = """---
+category: "blog post"
+status: editing
+created: 2026-10-10
+tags: []
+title: "A post"
+description: "What it is about"
+---
+"""
+    result = validate_content(content, specs, no_llm=True)
+    assert not result.is_valid
+    assert any("status 'editing' is not one of outline, draft, published" in e for e in result.errors)
+    assert validate_content(content.replace("status: editing", "status: draft"), specs, no_llm=True).is_valid

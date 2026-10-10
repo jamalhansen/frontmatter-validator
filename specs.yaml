@@ -9,6 +9,11 @@ universal:
 categories:
   "blog post":
     aliases: ["blog post", "blog-post", "[[blog post]]"]
+    # The statuses the tools agree on: calib write prompts outlines and drafts,
+    # obsidian-hugo publishes live only on published, blog-validate skips an
+    # outline's code. Anything else (2026-10-10: "editing") works by accident
+    # in one tool and is invisible to the others.
+    statuses: [outline, draft, published]
     fields:
       - title
       - description
