@@ -13,7 +13,8 @@ categories:
     # obsidian-hugo publishes live only on published, blog-validate skips an
     # outline's code. Anything else (2026-10-10: "editing") works by accident
     # in one tool and is invisible to the others.
-    statuses: [outline, draft, published]
+    # archived: was live once and no longer is, or was never going to be; kept for the record.
+    statuses: [outline, draft, published, archived]
     fields:
       - title
       - description
@@ -40,6 +41,7 @@ categories:
       - origin
       - inspired_by
       - ready_after
+      - archived_reason
   "find":
     aliases: ["find", "[[find]]"]
     fields:
