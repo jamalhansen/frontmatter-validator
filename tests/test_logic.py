@@ -44,6 +44,7 @@ def test_validate_blog_post_valid(specs):
     content = """---
 category: "[[Blog Post]]"
 status: draft
+description: "What the post is about"
 created: 2026-03-26
 published_date: ""
 canonical_url: ""
@@ -87,6 +88,7 @@ def test_validate_with_template_fields(specs):
     content = """---
 category: "blog post"
 status: draft
+description: "What the post is about"
 created: 2026-03-26
 published_date: ""
 canonical_url: ""
@@ -187,6 +189,7 @@ def test_draft_status_does_not_require_published_date_or_canonical_url(specs):
     content = """---
 category: "blog post"
 status: draft
+description: "What the post is about"
 created: 2026-03-26
 tags: []
 title: "A draft post"

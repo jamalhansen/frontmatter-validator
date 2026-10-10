@@ -28,6 +28,13 @@ categories:
       - weight
       - published_date
       - canonical_url
+      - cover
+      - alt
+      - source
+      - source_note
+      - origin
+      - inspired_by
+      - ready_after
   "find":
     aliases: ["find", "[[find]]"]
     fields:
@@ -92,3 +99,15 @@ validations:
     # finds even ship a template canonical_url: "" placeholder that this
     # rule was treating as "still needs filling."
     require: [canonical_url]
+  # A draft needs its description before it reaches the publish tool, which
+  # refuses a post without one (obsidian-hugo check). Outlines and the old
+  # series drafts are left alone: 28 outlines and 26 published series posts
+  # lack one (2026-10-10), and flagging them weekly is noise, not a signal.
+  - field: status
+    value: draft
+    when_category: ["blog post"]
+    require: [description]
+  - field: status
+    value: editing
+    when_category: ["blog post"]
+    require: [description]
