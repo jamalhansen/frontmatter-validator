@@ -14,7 +14,10 @@ categories:
     # outline's code. Anything else (2026-10-10: "editing") works by accident
     # in one tool and is invisible to the others.
     # archived: was live once and no longer is, or was never going to be; kept for the record.
-    statuses: [outline, draft, published, archived]
+    # idea/seed (not started), dropped (abandoned, e.g. the DuckDB series 2026-09-27) added
+    # 2026-10-11: the first run with this list flagged 46 files for statuses the vault has
+    # always used. The tools ignore all three, which is what those notes want.
+    statuses: [idea, seed, outline, draft, published, archived, dropped]
     fields:
       - title
       - description

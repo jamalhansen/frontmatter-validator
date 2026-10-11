@@ -226,5 +226,5 @@ description: "What it is about"
 """
     result = validate_content(content, specs, no_llm=True)
     assert not result.is_valid
-    assert any("status 'editing' is not one of outline, draft, published" in e for e in result.errors)
+    assert any("status 'editing' is not one of idea, seed, outline, draft, published" in e for e in result.errors)
     assert validate_content(content.replace("status: editing", "status: draft"), specs, no_llm=True).is_valid
